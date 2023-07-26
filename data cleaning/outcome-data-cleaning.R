@@ -31,10 +31,6 @@ fonts()
 #Loading in datasets
 covid_data1 <- fread("covid_registry_2023-05-09.csv", 
                      select = c("age", 
-                                "cntyfips",
-                                "county", 
-                                "ctract",
-                                "dtdeath",
                                 "dtepisode",
                                 "raceeth",
                                 "sex2",
@@ -42,12 +38,7 @@ covid_data1 <- fread("covid_registry_2023-05-09.csv",
                                 "hospitalized",
                                 "died",
                                 "test_type",
-                                "boost_2_vax_status_match",
-                                "postvax_case_match",
-                                "ncovpuihospdtladmitdt_1",
-                                "ncovpuihospdtladmitdt_2",
-                                "ncovpuihospdtladmitdt_3",
-                                "dtlabresult"
+                                "boost_2_vax_status_match"
                      ), 
                      showProgress = FALSE)
 
@@ -62,11 +53,8 @@ covid_data_cleaning <- covid_data1
 #Converting dated variables to Date objects
 covid_data_cleaning$dtepisode <- as.Date(covid_data_cleaning$dtepisode)
 covid_data_cleaning$dtdeath <- as.Date(covid_data_cleaning$dtdeath)
-covid_data_cleaning$ncovpuihospdtladmitdt_1 <- as.Date(covid_data_cleaning$ncovpuihospdtladmitdt_1)
-covid_data_cleaning$ncovpuihospdtladmitdt_2 <- as.Date(covid_data_cleaning$ncovpuihospdtladmitdt_2)
-covid_data_cleaning$ncovpuihospdtladmitdt_3 <- as.Date(covid_data_cleaning$ncovpuihospdtladmitdt_3)
 
-#Only keeping confirmed cases and reasonable ages (0-110 yrs old) and data from the last 6 mo (3/1/22 - 9/8/22)
+#Only keeping confirmed cases and reasonable ages (0-110 yrs old) and data from the last 6 mo (7/23/22 - 1/23/23)
 covid_data_cleaning <- covid_data_cleaning %>%
   filter(age >= 0,
          age <= 110,
@@ -106,9 +94,6 @@ covid_data_cleaning <- covid_data_cleaning %>%
     )
   )
 
-inspection <- covid_data_cleaning %>% filter(!is.na(dt_hosp)) %>% group_by (boost_2_vax_status_match) %>%
-  summarise(total = n())
-
 #Relabeling the vaccination status values
 covid_data_cleaning <- covid_data_cleaning %>%
   mutate(boost_2_vax_status_match = recode(boost_2_vax_status_match, 
@@ -126,10 +111,6 @@ covid_data_cleaning$boost_2_vax_status_match <- factor(covid_data_cleaning$boost
                                                                   "Primary Series", 
                                                                   "Boosted (1 dose)",
                                                                   "Boosted (2 doses)"))
-inspection <- covid_data_cleaning %>% filter(!is.na(dt_hosp)) %>%
-  group_by(boost_2_vax_status_match) %>% summarise(total_outcomes = n()) %>%
-  mutate(total_outcomes = round(total_outcomes * (1/0.75)),
-         perc_outcomes = round(total_outcomes/sum(total_outcomes) * 100, 2))
 #Save as .csv file
 write.csv(covid_data_cleaning %>% filter(!is.na(dt_death)), 'covid_data_clean_death_final.csv')
 write.csv(covid_data_cleaning %>% filter(!is.na(dt_hosp)), 'covid_data_clean_hosp_final.csv')
