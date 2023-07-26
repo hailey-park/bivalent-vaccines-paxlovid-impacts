@@ -99,31 +99,3 @@ bivalent_booster_doses <- data.frame(strategy = c("strat1", "strat2", "strat3", 
 bivalent_booster_clean <- melt(bivalent_booster_doses) %>% rename(total_doses = value) %>% mutate(total_doses = ceiling(total_doses))
   
 write.csv(bivalent_booster_clean , 'outcome data clean/bivalent_booster_doses_clean_70maxuptake_v2.csv')
-
-#################################################################################################
-#plotting 
-
-all_ca <- melt(covid_vaccine_data %>%
-  filter(demographic_category == 'Age Group',
-         administered_date > as.Date('2022-07-01'),
-         demographic_value != "Unknown Agegroup") %>%
-  group_by(administered_date) %>% summarise(boost_count = sum(cumulative_booster_recip_count),
-                                            booster_eligible = sum(booster_eligible_population),
-                                            bivalent_count = sum(cumulative_bivalent_booster_recip_count),
-                                            bivalent_eligible = sum(bivalent_booster_eligible_population)
-                                            ) %>%
-  mutate(prop_booster = round(boost_count/booster_eligible, 3),
-         prop_bivalent = round(bivalent_count/bivalent_eligible, 3)) %>%
-  select(administered_date, prop_booster, prop_bivalent), id = "administered_date")
-
-ggplot(data = all_ca, aes(x = administered_date, y = value, color = variable)) +
-  geom_line()
-
-
-
-
-
-
-
-
-
