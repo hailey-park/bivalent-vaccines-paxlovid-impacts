@@ -67,6 +67,9 @@ covid_death <- merge(merge(covid_death_data_crossval %>%
 
 ###################################################################################################
 #Regression Model: Simple Model using only age_group and vaccination status as predictors
+#NOTE: We are running the regression model on each outcome (cases, hospitalizations, deaths) separately, so make sure to swap out dependent variable ('num_cases_adj', 'num_hosp_adj', 'num_death_adj'), 
+#      and outcome dataframes ('covid_case', 'covid_hosp', 'covid_death').
+
 calibration_data <- covid_cases %>% filter(weeks_since_april2022 %in% c(0:26))
 
 #Model Calibration (on 6 months of data)
@@ -88,7 +91,6 @@ sum((covid_cases%>% filter(weeks_since_april2022 %in% c(27:39)))$num_cases_adj, 
 predictions_df <- validation_period %>% group_by(age_group, boost_2_vax_status_match) %>% 
                                 summarise(num_cases = sum(num_cases_adj), predicted_cases = sum(prediction))
 
-##########################
 #Primary Vaccine Strategies Analysis
 
 strat1 <- predictions_df %>% mutate(predicted_cases = ifelse((boost_2_vax_status_match %in% c("Unvaccinated", "Primary Series", "Boosted (1 dose)", "Boosted (2 doses)")),
