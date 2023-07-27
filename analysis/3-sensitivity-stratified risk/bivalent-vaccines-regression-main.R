@@ -68,6 +68,9 @@ ve_estimates <- data.frame(baseline_vacc = c("Unvaccinated", "Primary Series", "
 
 ###################################################################################################
 #Regression Model: Simple Model using only age_group and vaccination status as predictors
+#NOTE: We are running the regression model on each outcome (cases, hospitalizations, deaths) separately, so make sure to swap out dependent variable ('num_cases_adj', 'num_hosp_adj', 'num_death_adj'), 
+#      the vaccine effectiveness names ('ve_cases', 've_hosps', 've_deaths') and outcome dataframes ('covid_case', 'covid_hosp', 'covid_death').
+
 calibration_data <- covid_case %>% filter(weeks_since_july2022 %in% c(0:26))
 
 #Model Calibration (on 6 months of data)
@@ -121,46 +124,8 @@ predictions_df <- merge(validation_period %>% group_by(weeks_since_july2022, age
   mutate(predicted_case = round(predicted_case))
 
 ##########################
-#Primary Vaccine Strategies Analysis
-                                  
-strat1 <- predictions_df %>% mutate(averted_diff = ifelse((boost_2_vax_status_match %in% c("Unvaccinated", "Primary Series", "Boosted (1 dose)", "Boosted (2 doses)")),
-                                                          predicted_case * ve_cases * (0.7 - bivalent_coverage), 0),
-                                    total_predicted = predicted_case * (1 - (bivalent_coverage * ve_cases)))
-                                
-strat1$strategy <- rep("strat1", nrow(strat1))
+#Vaccine Strategies Analysis (Stratified Analysis: Strategies 8-16)
 
-strat2 <- predictions_df %>% mutate(averted_diff = ifelse((boost_2_vax_status_match %in% c("Primary Series", "Boosted (1 dose)", "Boosted (2 doses)")),
-                                                          predicted_case * ve_cases * (0.7 - bivalent_coverage), 0),
-                                    total_predicted = predicted_case * (1 - (bivalent_coverage * ve_cases)))
-strat2$strategy <- rep("strat2", nrow(strat2))
-
-strat3 <- predictions_df %>% mutate(averted_diff = ifelse((boost_2_vax_status_match %in% c("Unvaccinated")),
-                                                          predicted_case * ve_cases * (0.7 - bivalent_coverage), 0),
-                                    total_predicted = predicted_case * (1 - (bivalent_coverage * ve_cases)))
-strat3$strategy <- rep("strat3", nrow(strat3))
-
-strat4 <- predictions_df %>% mutate(averted_diff = ifelse((boost_2_vax_status_match %in% c("Primary Series")),
-                                                          predicted_case * ve_cases * (0.7 - bivalent_coverage), 0),
-                                    total_predicted = predicted_case * (1 - (bivalent_coverage * ve_cases)))
-strat4$strategy <- rep("strat4", nrow(strat3))
-
-strat5 <- predictions_df %>% mutate(averted_diff = ifelse(((age_group %in% c( "75-84 years", "85+ years")) & (boost_2_vax_status_match != "Unvaccinated")),
-                                                          predicted_case * ve_cases * (0.7 - bivalent_coverage), 0),
-                                    total_predicted = predicted_case * (1 - (bivalent_coverage * ve_cases))) 
-strat5$strategy <- rep("strat5", nrow(strat3))
-
-strat6 <- predictions_df %>% mutate(averted_diff = ifelse(((age_group %in% c( "65-74 years", "75-84 years", "85+ years")) & (boost_2_vax_status_match != "Unvaccinated")),
-                                                          predicted_case * ve_cases * (0.7 - bivalent_coverage), 0),
-                                    total_predicted = predicted_case * (1 - (bivalent_coverage * ve_cases)))
-strat6$strategy <- rep("strat6", nrow(strat1))
-
-strat7 <- predictions_df %>% mutate(averted_diff = ifelse(((age_group %in% c("50-64 years", "65-74 years", "75-84 years", "85+ years")) & (boost_2_vax_status_match != "Unvaccinated")),
-                                                          predicted_case * ve_cases * (0.7 - bivalent_coverage), 0),
-                                    total_predicted = predicted_case * (1 - (bivalent_coverage * ve_cases)))
-strat7$strategy <- rep("strat7", nrow(strat1))
-                                
-##########################
-#Additional Vaccine Strategies (Stratified)
 strat8 <- predictions_df %>% mutate(averted_diff = ifelse(((age_group %in% c( "50-64 years", "65-74 years", "75-84 years", "85+ years")) & (boost_2_vax_status_match == "Unvaccinated")),
                                                           predicted_case * ve_cases * (0.7 - bivalent_coverage), 0),
                                     total_predicted = predicted_case * (1 - (bivalent_coverage * ve_cases)))
@@ -209,7 +174,6 @@ strat16 <- predictions_df %>% mutate(averted_diff = ifelse(((age_group %in% c( "
 strat16$strategy <- rep("strat16", nrow(strat16))
 ##########################
 
-#combined_strat <- bind_rows(strat1, strat2, strat3, strat4, strat5, strat6, strat7)
 combined_strat <- bind_rows(strat8, strat9, strat10, strat11, strat12, strat13, strat14, strat15, strat16)
 
 
@@ -221,7 +185,6 @@ merged_data <- merge(combined_strat_outcomes, bivalent_booster_data, by = c("str
   mutate(ARR = averted_outcomes_diff/(total_doses),
          NNT = ceiling(1/ARR),
          perc_averted = round(averted_outcomes_diff/total_predicted_outcomes * 100, 1),
-         #strategy = factor(strategy, levels = c("strat1", "strat2", "strat3", "strat4", "strat5", "strat6", "strat7")))%>%
          strategy = factor(strategy, levels = c("strat8", "strat9", "strat10", "strat11", "strat12", "strat13", "strat14", "strat15", "strat16")))%>%
   select(-c(variable))
 
