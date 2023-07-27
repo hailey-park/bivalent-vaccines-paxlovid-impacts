@@ -36,15 +36,20 @@ n <- 1000
 #Cross-Validation Simulations
 
 #Create df to store results
-vax_death_results <- data.frame(matrix(nrow = 1000, ncol = 1*7))
+vax_cases_results <- data.frame(matrix(nrow = 1000, ncol = 1*7)) 
+colnames(vax_cases_results) <- c(sprintf("strat%d_predicted_outcomes", 1:7))
+vax_hosp_results <- data.frame(matrix(nrow = 1000, ncol = 1*7)) 
+colnames(vax_hosp_results) <- c(sprintf("strat%d_predicted_outcomes", 1:7))
+vax_death_results <- data.frame(matrix(nrow = 1000, ncol = 1*7)) 
 colnames(vax_death_results) <- c(sprintf("strat%d_predicted_outcomes", 1:7))
 
 #Run Monte Carlo simulation (N = 1000)
+#NOTE: Switch out df names for respective outcome analyses.
 for (i in c(1:n)) {
   print(i)
   #create df with predictions
   covid_df <- base_df_crossval
-  covid_df$predicted_outcomes <- crossval_simulated_death[i,]
+  covid_df$predicted_outcomes <- crossval_simulated_death[i,] #CHANGE HERE ('crossval_simulated_cases', 'crossval_simulated_hosp', 'crossval_simulated_death')
   total_outcomes <- ceiling(sum(covid_df$predicted_outcomes))
   
   
@@ -83,10 +88,10 @@ for (i in c(1:n)) {
   
   combined_strat_outcomes <- combined_strat %>% group_by(strategy) %>% summarise(predicted_outcomes = ceiling(sum(predicted_outcomes))) 
   
-  vax_death_results[i,] <- c(combined_strat_outcomes$predicted_outcomes)
+  vax_death_results[i,] <- c(combined_strat_outcomes$predicted_outcomes) #CHANGE HERE ('vax_death_results', 'vax_hosp_results', 'vax_cases_results')
 }
 
-saveRDS(vax_death_results, "data/results-crossval-death.RDS")
+saveRDS(vax_death_results, "data/results-crossval-death.RDS")  #CHANGE HERE ('vax_death_results', 'vax_hosp_results', 'vax_cases_results')
 
 
 
