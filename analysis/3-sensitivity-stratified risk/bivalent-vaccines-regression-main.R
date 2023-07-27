@@ -61,9 +61,8 @@ covid_death <- merge(merge(covid_death_data %>% mutate(weeks_since_july2022 = as
   mutate(num_death_adj = ceiling(num_death * adj_factor)) %>% select(weeks_since_july2022, boost_2_vax_status_match, age_group, num_death, adj_factor, num_death_adj)
 
   
-#Create dataframes for VE estimates for averting outcomes
+#Create dataframes for VE estimates for averting outcomes (for averting hospitalizations and deaths; VE for cases will be added later since it's time-varying)
 ve_estimates <- data.frame(baseline_vacc = c("Unvaccinated", "Primary Series", "Boosted (1 dose)","Boosted (2 doses)"),
-                           #ve_cases = c(.32, .41, .26, .40),
                            ve_hosps = c(.29, .57, .38, .56),
                            ve_deaths = c(.57, .75, .62, .63))
 
