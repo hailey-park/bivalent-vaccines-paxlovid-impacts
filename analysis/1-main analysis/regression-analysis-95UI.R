@@ -129,7 +129,7 @@ for (i in c(1:n)) {
   vax_hosp_results[i,] <- c(merged_data$NNT, merged_data$perc_averted, merged_data$averted_outcomes_diff)
 }
 
-saveRDS(vax_hosp_results, "data/results-vax-hosp.RDS")
+saveRDS(vax_hosp_results, "data/results-vax-hosp.RDS") #CHANGE HERE ('hosp' vs. 'death')
 
 ########################################################################
 #Bivalent Vaccine Simulations with Waning (Outcomes: Cases) 
@@ -335,7 +335,7 @@ for (i in c(1:n)) {
   pax_hosp_results[i,] <- c(combined_strat_outcomes$NNT, combined_strat_outcomes$perc_averted, combined_strat_outcomes$averted_outcomes_cascade)
 }
 
-saveRDS(pax_hosp_results, "data/results-pax-hosp.RDS")
+saveRDS(pax_hosp_results, "data/results-pax-hosp.RDS") #CHANGE HERE ('hosp' vs. 'death')
 
 #################################################################
 
