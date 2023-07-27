@@ -66,7 +66,7 @@ covid_death <- merge(merge(covid_death_data %>%
                      adjustment_factor_death, by = c("month", "age_group", "boost_2_vax_status_match"), all.x = TRUE) %>%
   mutate(num_death_adj = ceiling(num_death * adj_factor)) %>% select(weeks_since_july2022, boost_2_vax_status_match, age_group, num_death, adj_factor, num_death_adj)
 
-
+#Merge the case outcome df with the severe outcome dfs
 pax_death <- merge(covid_cases, covid_death, by = c("weeks_since_july2022", "age_group", "boost_2_vax_status_match"),
                    all.x = TRUE) %>% replace(is.na(.), 0)
 
@@ -84,6 +84,9 @@ inspection <- covid_cases %>% group_by(age_group, boost_2_vax_status_match) %>% 
 
 ###################################################################################################
 #Regression Model: Simple Model using only age_group and vaccination status as predictors
+#NOTE: We are running the regression model on each outcome (cases, hospitalizations, deaths) separately, so make sure to swap out dependent variable ('num_cases_adj', 'num_hosp_adj', 'num_death_adj'), 
+#      the vaccine effectiveness names ('pe_hosps', 'pe_deaths') and outcome dataframes ('pax_hosp', 'pax_death').
+
 
 #Model Calibration (on 6 months of data)
 model1 <- glm(num_cases_adj ~ age_group + boost_2_vax_status_match, 
@@ -120,8 +123,7 @@ predictions_pax_df <- merge(calibration_period %>% mutate(vacc_status = ifelse(b
                                     TRUE ~ 0))
 
 
-#######################################
-#Primary Strategies
+#Strategies with Expanded Eligibility (Strategies 1-2)
 
 #Strategy 1: Giving Paxlovid to those 18+ years (everyone)
   #Assumption: setting maximum paxlovid coverage to be 70% for everyone
@@ -141,96 +143,9 @@ strat2 <- predictions_pax_df %>% mutate(averted_death_diff = case_when((age_grou
                                         total_predicted = predicted_death * (1 - (baseline_pax_uptake * pe_deaths)))
 strat2$strategy <- rep("strat2", nrow(strat2))
 
-#Strategy 3: Giving Paxlovid to those 18+ years (unvaccinated and comorbidities)
-strat3 <- predictions_pax_df %>% mutate(averted_death_diff = case_when((age_group %in% c("18-49 years","50-64 years", "65-74 years", "75-84 years", "85+ years")) ~ predicted_death * pe_deaths * (max_pax_uptake - baseline_pax_uptake),
-                                                                 TRUE ~ 0),
-                                        target_group_cases_diff = case_when((age_group %in% c("18-49 years","50-64 years", "65-74 years", "75-84 years", "85+ years")) ~ predicted_cases * (max_pax_uptake - baseline_pax_uptake),
-                                                                       TRUE ~ 0),
-                                        total_predicted = predicted_death * (1 - (baseline_pax_uptake * pe_deaths)))
-                                        
-
-strat3$strategy <- rep("strat3", nrow(strat3))
-
-#Strategy 4: Giving Paxlovid to those 50+ years (unvaccinated and comorbidities)
-strat4 <- predictions_pax_df %>% mutate(averted_death_diff = case_when((age_group %in% c("50-64 years", "65-74 years", "75-84 years", "85+ years")) ~ predicted_death * pe_deaths * (max_pax_uptake - baseline_pax_uptake),
-                                                                      TRUE ~ 0),
-                                        target_group_cases_diff = case_when((age_group %in% c("50-64 years", "65-74 years", "75-84 years", "85+ years")) ~ predicted_cases * (max_pax_uptake - baseline_pax_uptake),
-                                                                            TRUE ~ 0),
-                                        total_predicted = predicted_death * (1 - (baseline_pax_uptake * pe_deaths)))  
-
-strat4$strategy <- rep("strat4", nrow(strat4))
+combined_strat <- bind_rows(strat1, strat2)
 
 
-#Strategy 5: Giving Paxlovid to the those 65+ years
-strat5 <- predictions_pax_df %>% mutate(averted_death_diff = ifelse((age_group %in% c("65-74 years", "75-84 years", "85+ years")),
-                                                               predicted_death * pe_deaths * (max_pax_uptake - baseline_pax_uptake), 0),
-                                        target_group_cases_diff = ifelse((age_group %in% c("65-74 years", "75-84 years", "85+ years")),
-                                                                    predicted_cases * (max_pax_uptake - baseline_pax_uptake), 0),
-                                        total_predicted = predicted_death * (1 - (baseline_pax_uptake * pe_deaths)))
-
-strat5$strategy <- rep("strat5", nrow(strat5))
-
-#Strategy 6: Giving Paxlovid to the those 75+ years
-strat6 <- predictions_pax_df %>% mutate(averted_death_diff = ifelse((age_group %in% c("75-84 years", "85+ years")),
-                                                               predicted_death * pe_deaths * (max_pax_uptake - baseline_pax_uptake), 0),
-                                        target_group_cases_diff = ifelse((age_group %in% c("75-84 years", "85+ years")),
-                                                                        predicted_cases * (max_pax_uptake - baseline_pax_uptake), 0),
-                                        total_predicted = predicted_death * (1 - (baseline_pax_uptake * pe_deaths)))
-
-strat6$strategy <- rep("strat6", nrow(strat6))  
-
-combined_strat <- bind_rows(strat1, strat2, strat3, strat4, strat5, strat6)
-
-#######################################
-#Additional Paxlovid Strategies
-
-#Strategy 1: Giving Paxlovid to those Unvaccinated (65+ years)
-strat1 <- predictions_pax_df %>% mutate(averted_death_diff = ifelse((age_group %in% c("65-74 years", "75-84 years", "85+ years") & boost_2_vax_status_match %in% c("Unvaccinated")), predicted_death * pe_deaths * (max_pax_uptake - baseline_pax_uptake), 0),
-                                        target_group_cases_diff = ifelse((age_group %in% c("65-74 years", "75-84 years", "85+ years") & boost_2_vax_status_match %in% c("Unvaccinated")), predicted_cases * (max_pax_uptake - baseline_pax_uptake), 0),
-                                        total_predicted = predicted_death * (1 - (baseline_pax_uptake * pe_deaths)))
-
-strat1$strategy <- rep("strat1", nrow(strat1))
-
-#Strategy 2: Giving Paxlovid to those Unvaccinated (75+ years)
-strat2 <- predictions_pax_df %>% mutate(averted_death_diff = ifelse((age_group %in% c("75-84 years", "85+ years") & boost_2_vax_status_match %in% c("Unvaccinated")), predicted_death * pe_deaths * (max_pax_uptake - baseline_pax_uptake), 0),
-                                        target_group_cases_diff = ifelse((age_group %in% c("75-84 years", "85+ years") & boost_2_vax_status_match %in% c("Unvaccinated")), predicted_cases * (max_pax_uptake - baseline_pax_uptake), 0),
-                                        total_predicted = predicted_death * (1 - (baseline_pax_uptake * pe_deaths)))
-
-strat2$strategy <- rep("strat2", nrow(strat2))
-
-
-#Strategy 3:Giving Paxlovid to those Primary Series only (65+ years)
-strat3 <- predictions_pax_df %>% mutate(averted_death_diff = ifelse((age_group %in% c("65-74 years", "75-84 years", "85+ years") & boost_2_vax_status_match %in% c("Primary Series")), predicted_death * pe_deaths * (max_pax_uptake - baseline_pax_uptake), 0),
-                                        target_group_cases_diff = ifelse((age_group %in% c("65-74 years", "75-84 years", "85+ years") & boost_2_vax_status_match %in% c("Primary Series")), predicted_cases * (max_pax_uptake - baseline_pax_uptake), 0),
-                                        total_predicted = predicted_death * (1 - (baseline_pax_uptake * pe_deaths)))
-
-strat3$strategy <- rep("strat3", nrow(strat3))
-
-#Strategy 4: Giving Paxlovid to those Primary Series only (75+ years)
-strat4 <- predictions_pax_df %>% mutate(averted_death_diff = ifelse((age_group %in% c("75-84 years", "85+ years") & boost_2_vax_status_match %in% c("Primary Series")), predicted_death * pe_deaths * (max_pax_uptake - baseline_pax_uptake), 0),
-                                        target_group_cases_diff = ifelse((age_group %in% c("75-84 years", "85+ years") & boost_2_vax_status_match %in% c("Primary Series")), predicted_cases * (max_pax_uptake - baseline_pax_uptake), 0),
-                                        total_predicted = predicted_death * (1 - (baseline_pax_uptake * pe_deaths)))
-
-strat4$strategy <- rep("strat4", nrow(strat4))
-
-#Strategy 5: Giving Paxlovid to those Boosted only (65+ years)
-strat5 <- predictions_pax_df %>% mutate(averted_death_diff = ifelse((age_group %in% c("65-74 years", "75-84 years", "85+ years") & boost_2_vax_status_match %in% c("Boosted (1 dose)", "Boosted (2 doses)")), predicted_death * pe_deaths * (max_pax_uptake - baseline_pax_uptake), 0),
-                                        target_group_cases_diff = ifelse((age_group %in% c("65-74 years", "75-84 years", "85+ years") & boost_2_vax_status_match %in% c("Boosted (1 dose)", "Boosted (2 doses)")), predicted_cases * (max_pax_uptake - baseline_pax_uptake), 0),
-                                        total_predicted = predicted_death * (1 - (baseline_pax_uptake * pe_deaths)))
-
-strat5$strategy <- rep("strat5", nrow(strat5))
-
-#Strategy 6: Giving Paxlovid to those Boosted only (75+ years)
-strat6 <- predictions_pax_df %>% mutate(averted_death_diff = ifelse((age_group %in% c("75-84 years", "85+ years") & boost_2_vax_status_match %in% c("Boosted (1 dose)", "Boosted (2 doses)")), predicted_death * pe_deaths * (max_pax_uptake - baseline_pax_uptake), 0),
-                                        target_group_cases_diff = ifelse((age_group %in% c("75-84 years", "85+ years") & boost_2_vax_status_match %in% c("Boosted (1 dose)", "Boosted (2 doses)")), predicted_cases * (max_pax_uptake - baseline_pax_uptake), 0),
-                                        total_predicted = predicted_death * (1 - (baseline_pax_uptake * pe_deaths)))
-
-strat6$strategy <- rep("strat6", nrow(strat6))
-
-combined_strat <- bind_rows(strat1, strat2, strat3, strat4, strat5, strat6)
-
-
-#######################################
 combined_strat_outcomes <- combined_strat %>% group_by(strategy) %>% summarise(averted_outcomes_diff = ceiling(sum(averted_death_diff)),
                                                                                total_death = ceiling(sum(total_predicted)),
                                                                                target_group_cases_diff = ceiling(sum(target_group_cases_diff))) %>%
@@ -238,6 +153,6 @@ combined_strat_outcomes <- combined_strat %>% group_by(strategy) %>% summarise(a
          treated_cascade = ceiling(target_group_cases_diff * 0.8 * 0.895),
          NNT = ceiling(treated_cascade/averted_outcomes_cascade),
          perc_averted = round(averted_outcomes_cascade/ total_death * 100, 1),
-         strategy = factor(strategy, levels = c("strat1", "strat2", "strat3", "strat4", "strat5", "strat6")))
+         strategy = factor(strategy, levels = c("strat1", "strat2")))
          
 
