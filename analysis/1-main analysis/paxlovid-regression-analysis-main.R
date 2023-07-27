@@ -67,6 +67,7 @@ covid_death <- merge(merge(covid_death_data %>%
   mutate(num_death_adj = ceiling(num_death * adj_factor)) %>% select(weeks_since_july2022, boost_2_vax_status_match, age_group, num_death, adj_factor, num_death_adj)
 
 
+#Merge the case outcome df with the severe outcome dfs
 pax_death <- merge(covid_cases, covid_death, by = c("weeks_since_july2022", "age_group", "boost_2_vax_status_match"),
                    all.x = TRUE) %>% replace(is.na(.), 0)
 
