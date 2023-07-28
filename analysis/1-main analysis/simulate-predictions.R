@@ -70,10 +70,10 @@ list <- lapply(p[,1], function(x) qnorm(x, calibration_period$prediction, calibr
 vax_cases <- do.call(rbind, list)
 vax_cases[vax_cases < 0] <- 0
 
-saveRDS(vax_cases, "data/simulated-cases-crossval.RDS")
-saveRDS(vax_hosp, "data/simulated-hosp-crossval.RDS")
-saveRDS(vax_death, "data/simulated-death-crossval.RDS")
-saveRDS(calibration_period %>% select(weeks_since_july2022, age_group, boost_2_vax_status_match), 'data/base-dataframe-crossval.RDS')
+saveRDS(vax_cases, "data/simulated-cases.RDS")
+saveRDS(vax_hosp, "data/simulated-hosp.RDS")
+saveRDS(vax_death, "data/simulated-death.RDS")
+saveRDS(calibration_period %>% select(weeks_since_july2022, age_group, boost_2_vax_status_match), 'data/base-dataframe.RDS')
 
 
 
